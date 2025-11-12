@@ -1,0 +1,7 @@
+unset HISTFILE
+
+ nmcli radio wifi
+nmcli radio wifi on
+rfkill list
+
+nmcli device
