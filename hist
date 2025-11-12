@@ -1,0 +1,3 @@
+ nmcli connection show
+sudo nmcli connection delete "Wired connection 1"
+  sudo nmcli connection delete "MyWiFi"
