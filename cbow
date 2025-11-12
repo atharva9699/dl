@@ -1,0 +1,66 @@
+import numpy as np
+import re
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Lambda, Dense
+import matplotlib.pyplot as plt
+
+# Step 1: Input text
+data = """The Continuous Bag of Words is a natural language processing technique 
+to generate word embeddings. Word embeddings are useful for many NLP tasks 
+as they represent semantics and structural connections amongst words."""
+
+# Step 2: Clean text
+def clean_text(text):
+    sentences = text.lower().split('.')
+    result = []
+    for s in sentences:
+        s = re.sub('[^a-z0-9 ]+', '', s).strip()
+        if s:
+            result.append(s)
+    return result
+
+sentences = clean_text(data)
+
+# Step 3: Tokenize
+tok = Tokenizer()
+tok.fit_on_texts(sentences)
+word_to_idx = tok.word_index
+idx_to_word = tok.index_word
+vocab_size = len(word_to_idx) + 1
+
+# Step 4: Create CBOW pairs
+context_size = 2
+X, Y = [], []
+for seq in tok.texts_to_sequences(sentences):
+    for i in range(context_size, len(seq) - context_size):
+        context = seq[i - context_size:i] + seq[i + 1:i + context_size + 1]
+        X.append(context)
+        Y.append(seq[i])
+
+X, Y = np.array(X), np.array(Y)
+
+# Step 5: Define CBOW model
+model = Sequential([
+    Embedding(input_dim=vocab_size, output_dim=10),
+    Lambda(lambda x: tf.reduce_mean(x, axis=1)),
+    Dense(64, activation='relu'),
+    Dense(vocab_size, activation='softmax')
+])
+
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.fit(X, Y, epochs=100, verbose=0)
+
+# Step 6: Plot
+plt.plot(model.history.history['loss'], label='Loss')
+plt.plot(model.history.history['accuracy'], label='Accuracy')
+plt.legend()
+plt.show()
+
+# Step 7: Test
+tests = ["continuous bag words is", "natural language technique to", "technique to word embeddings"]
+for t in tests:
+    test_seq = [word_to_idx[w] for w in t.split()]
+    pred = np.argmax(model.predict(np.array([test_seq]), verbose=0))
+    print(f"Context: {t} -> Predicted: {idx_to_word[pred]}")
